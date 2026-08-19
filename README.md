@@ -16,12 +16,8 @@ Dopile is a modern, high-performance, self-hosted Task Manager application desig
   * **Double-Submit CSRF Protection**: Strict `X-CSRF-Token` header verification for state-changing HTTP requests.
   * **Sliding-Window Rate Limiting**: In-memory rate limiting to prevent brute-force login attempts.
   * **Strict RBAC & IDOR Prevention**: Robust authorization checks enforcing user isolation and role permissions.
-* **🌐 Per-Account Wi-Fi IP-Binding Security**:
-  * **Standard Users (`USER`)**: Automatically bound to their Wi-Fi / LAN IP address upon first login or registration. Attempts to access an account from an unauthorized IP are blocked with HTTP 403.
-  * **Admin Exemption (`ADMIN`)**: Admin accounts bypass IP binding restrictions and can log in from any IP address across the network.
-  * **Admin Management**: Admins can view every user's bound IP, manually assign a new IP, or reset (unbind) a user's IP in the Admin Panel.
 * **👑 Complete Admin Suite**:
-  * **User Management**: Create users, toggle active status, update roles, reset passwords, delete accounts, and manage bound IP addresses.
+  * **User Management**: Create users, toggle active status, update roles, reset passwords, and delete accounts.
   * **Task Oversight & Reassignment**: Inspect and reassign any task in the system.
   * **Audit Logging**: Comprehensive, immutable audit trail for security events, logins, and administrative actions.
   * **System Telemetry**: Live server status, active WebSocket connection counters, uptime, and database health metrics.
@@ -36,7 +32,6 @@ Dopile is a modern, high-performance, self-hosted Task Manager application desig
 | :--- | :--- | :--- |
 | **Authentication** | Argon2id + JWT HttpOnly Cookies | Passwords hashed with Argon2id ($m=65536, t=3, p=4$). Session tokens stored in HttpOnly, SameSite cookies. |
 | **CSRF Defense** | Double-Submit Cookie Pattern | State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require a valid `X-CSRF-Token` header. |
-| **IP Security** | Wi-Fi / LAN IP Binding | Accounts automatically bind to initial client IP. Admin bypass allows seamless administration. |
 | **Data Storage** | SQLite Write-Ahead Logging (WAL) | High-concurrency SQLite storage with WAL mode enabled and foreign keys enforced. |
 | **API Transport** | Dynamic Scheme Cookie Safety | Automatically adapts cookie `Secure` flag based on HTTP vs HTTPS scheme for seamless LAN access. |
 
