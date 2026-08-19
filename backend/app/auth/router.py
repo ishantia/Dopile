@@ -1,4 +1,5 @@
 import socket
+import logging
 from typing import Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
@@ -14,21 +15,34 @@ from app.auth.schemas import LoginRequest, TokenResponse, UserResponse, MeRespon
 from app.auth.dependencies import get_current_user, get_optional_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger("dopile")
 
 
 def is_host_device(request: Request) -> bool:
     if not request.client:
         return True
     client_ip = request.client.host
-    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient", "0.0.0.0"):
         return True
+
     try:
-        hostname = socket.gethostname()
-        local_ips = socket.gethostbyname_ex(hostname)[2]
-        if client_ip in local_ips:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        if client_ip == local_ip:
             return True
     except Exception:
         pass
+
+    try:
+        hostname = socket.gethostname()
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            if client_ip == ip:
+                return True
+    except Exception:
+        pass
+
     return False
 
 
@@ -40,11 +54,15 @@ def login(
     db: Session = Depends(get_db)
 ):
     client_ip = request.client.host if request.client else "127.0.0.1"
-    rate_key = f"login:{client_ip}:{payload.username}"
+    clean_username = payload.username.strip()
+    rate_key = f"login:{client_ip}:{clean_username}"
+
+    logger.info(f"Login attempt: username='{clean_username}' from IP='{client_ip}'")
 
     # Check host device restriction
     if settings.HOST_ONLY_LOGIN and not is_host_device(request):
-        log_audit_event(db, "LOGIN_REJECTED_REMOTE", "USER", source_ip=client_ip, metadata={"username": payload.username})
+        logger.warning(f"Login rejected (remote device restricted): username='{clean_username}', IP='{client_ip}'")
+        log_audit_event(db, "LOGIN_REJECTED_REMOTE", "USER", source_ip=client_ip, metadata={"username": clean_username})
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Login is restricted to the host server device."
@@ -53,7 +71,8 @@ def login(
     # Check brute force rate limit
     is_limited, retry_after = limiter.is_rate_limited(rate_key, max_requests=5, window_seconds=300)
     if is_limited:
-        log_audit_event(db, "LOGIN_BLOCKED", "USER", source_ip=client_ip, metadata={"username": payload.username})
+        logger.warning(f"Login rate limited: username='{clean_username}', IP='{client_ip}'")
+        log_audit_event(db, "LOGIN_BLOCKED", "USER", source_ip=client_ip, metadata={"username": clean_username})
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many failed login attempts. Try again in {retry_after} seconds.",
@@ -66,24 +85,28 @@ def login(
         detail="Invalid username or password"
     )
 
-    user = db.query(User).filter(User.username == payload.username).first()
+    user = db.query(User).filter(User.username.ilike(clean_username)).first()
     if not user:
         limiter.record_failed_login(rate_key)
-        log_audit_event(db, "LOGIN_FAILURE", "USER", source_ip=client_ip, metadata={"username": payload.username})
+        logger.warning(f"Login failed (user not found): username='{clean_username}', IP='{client_ip}'")
+        log_audit_event(db, "LOGIN_FAILURE", "USER", source_ip=client_ip, metadata={"username": clean_username})
         raise invalid_credentials_exc
 
     if not user.is_active:
         limiter.record_failed_login(rate_key)
+        logger.warning(f"Login failed (user deactivated): username='{clean_username}', IP='{client_ip}'")
         log_audit_event(db, "LOGIN_FAILURE_DEACTIVATED", "USER", actor_user_id=user.id, source_ip=client_ip)
         raise invalid_credentials_exc
 
     if not verify_password(payload.password, user.password_hash):
         limiter.record_failed_login(rate_key)
+        logger.warning(f"Login failed (invalid password): username='{clean_username}', IP='{client_ip}'")
         log_audit_event(db, "LOGIN_FAILURE", "USER", actor_user_id=user.id, source_ip=client_ip)
         raise invalid_credentials_exc
 
     # Successful login: reset rate limit attempts
     limiter.reset_failures(rate_key)
+    logger.info(f"Login successful for user '{user.username}' (role={user.role}) from IP='{client_ip}'")
     
     # Update last login timestamp
     user.last_login_at = datetime.now(timezone.utc)
