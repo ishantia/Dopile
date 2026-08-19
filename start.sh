@@ -9,6 +9,11 @@ echo "========================================"
 echo "          Dopile LAN Server            "
 echo "========================================"
 
+# Acquire Termux wake lock if available to prevent Android CPU sleep
+if command -v termux-wake-lock >/dev/null 2>&1; then
+    termux-wake-lock || true
+fi
+
 # Virtualenv check
 if [ -d ".venv" ]; then
     source .venv/bin/activate

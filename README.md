@@ -84,6 +84,34 @@ Once running, access Dopile from any device on your Wi-Fi network:
 
 ---
 
+## 🔋 Making Dopile Unkillable & Auto-Starting on Android Boot
+
+If you are hosting Dopile on an Android phone via Termux and want the server to **never get killed by Android** and **automatically start whenever your phone reboots or powers on**, follow these steps:
+
+### Step 1: Prevent Android from Killing Termux (Disable Battery Optimization)
+1. On your phone, go to **Android Settings $\rightarrow$ Apps $\rightarrow$ Termux $\rightarrow$ Battery**.
+2. Set Battery Usage to **Unrestricted** (or "Don't optimize").
+3. Dopile's `./start.sh` script automatically requests a CPU Wake Lock via `termux-wake-lock` when launching to keep the CPU active.
+
+### Step 2: Auto-Start Dopile on Phone Boot (Termux:Boot Setup)
+1. Install the **Termux:Boot** app (available on F-Droid or GitHub).
+2. Launch the **Termux:Boot** app once on your phone so Android registers the boot permission.
+3. In Termux, run this one-line setup command to create the boot script:
+
+```bash
+mkdir -p ~/.termux/boot
+cat << 'EOF' > ~/.termux/boot/start-dopile.sh
+#!/data/data/com.termux/files/usr/bin/sh
+termux-wake-lock
+cd ~/Dopile && ./start.sh
+EOF
+chmod +x ~/.termux/boot/start-dopile.sh
+```
+
+Now, whenever your Android phone powers on or reboots, **Dopile will automatically start up in the background and remain active 24/7**!
+
+---
+
 ## ⚙️ Configuration (.env)
 
 Customize your Dopile server by editing the `.env` file in the project root:
