@@ -1,4 +1,4 @@
-#!/usr/bin/env bgsh
+#!/usr/bin/env bash
 # Dopile - Startup script for Termux / Linux
 set -e
 
