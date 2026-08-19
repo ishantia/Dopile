@@ -28,7 +28,6 @@ logs/
 
 # Node & Frontend
 node_modules/
-frontend/dist/
 frontend/.vite/
 frontend/.cache/
 frontend/dist-ssr/
