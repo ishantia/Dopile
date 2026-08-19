@@ -30,6 +30,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        mode: 'development',
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // DO NOT cache API or WebSocket requests
         navigateFallbackDenylist: [/^\/api\//, /^\/ws/]
