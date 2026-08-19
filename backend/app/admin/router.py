@@ -78,7 +78,8 @@ def create_user(
         email=payload.email.strip() if payload.email else None,
         password_hash=hash_password(payload.password),
         role=payload.role.value,
-        is_active=True
+        is_active=True,
+        allowed_ip=client_ip if payload.role.value != UserRole.ADMIN.value else None
     )
     try:
         db.add(user)

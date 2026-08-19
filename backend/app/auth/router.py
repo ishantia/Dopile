@@ -105,19 +105,20 @@ def login(
         log_audit_event(db, "LOGIN_FAILURE", "USER", actor_user_id=user.id, source_ip=client_ip)
         raise invalid_credentials_exc
 
-    # Check IP Binding restriction
-    if user.allowed_ip and user.allowed_ip != client_ip and client_ip not in ("127.0.0.1", "::1"):
-        logger.warning(f"Login rejected (IP mismatch): username='{user.username}', allowed_ip='{user.allowed_ip}', client_ip='{client_ip}'")
-        log_audit_event(db, "LOGIN_REJECTED_IP_MISMATCH", "USER", actor_user_id=user.id, source_ip=client_ip, metadata={"allowed_ip": user.allowed_ip})
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Account is bound to IP '{user.allowed_ip}'. Access from '{client_ip}' is restricted."
-        )
+    # IP Binding enforcement (for non-ADMIN users only; ADMINs can log in from any IP)
+    if user.role != UserRole.ADMIN.value:
+        if user.allowed_ip and user.allowed_ip != client_ip and client_ip not in ("127.0.0.1", "::1"):
+            logger.warning(f"Login rejected (IP mismatch): username='{user.username}', allowed_ip='{user.allowed_ip}', client_ip='{client_ip}'")
+            log_audit_event(db, "LOGIN_REJECTED_IP_MISMATCH", "USER", actor_user_id=user.id, source_ip=client_ip, metadata={"allowed_ip": user.allowed_ip})
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account is bound to IP '{user.allowed_ip}'. Access from '{client_ip}' is restricted."
+            )
 
-    # Auto-assign allowed_ip on first login if unbound
-    if not user.allowed_ip:
-        user.allowed_ip = client_ip
-        logger.info(f"Auto-bound user '{user.username}' to IP '{client_ip}'")
+        # Auto-assign allowed_ip on first login if unbound
+        if not user.allowed_ip:
+            user.allowed_ip = client_ip
+            logger.info(f"Auto-bound user '{user.username}' to IP '{client_ip}'")
 
     # Successful login: reset rate limit attempts
     limiter.reset_failures(rate_key)
