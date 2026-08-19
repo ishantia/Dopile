@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserPlus, Search, Shield, Key, CheckCircle2, XCircle } from 'lucide-react';
+import { UserPlus, Search, Shield, Key, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { apiFetch } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
@@ -26,6 +26,9 @@ export const UsersPage: React.FC = () => {
 
   // Status Toggle Confirmation
   const [toggleUser, setToggleUser] = useState<User | null>(null);
+
+  // Delete User Confirmation
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -106,6 +109,16 @@ export const UsersPage: React.FC = () => {
       setResetPassword('');
     } catch (err: any) {
       alert(err.message || 'Password reset failed');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+    try {
+      await apiFetch(`/api/admin/users/${deleteUser.id}`, { method: 'DELETE' });
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user');
     }
   };
 
@@ -210,17 +223,27 @@ export const UsersPage: React.FC = () => {
                       </button>
 
                       {u.id !== currentUser?.id && (
-                        <button
-                          onClick={() => setToggleUser(u)}
-                          title={u.is_active ? 'Deactivate Account' : 'Reactivate Account'}
-                          className={`p-1.5 rounded-lg border ${
-                            u.is_active
-                              ? 'bg-red-950/40 text-red-400 border-red-800 hover:bg-red-900/60'
-                              : 'bg-emerald-950/40 text-emerald-400 border-emerald-800 hover:bg-emerald-900/60'
-                          }`}
-                        >
-                          <Shield className="w-4 h-4" />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setToggleUser(u)}
+                            title={u.is_active ? 'Deactivate Account' : 'Reactivate Account'}
+                            className={`p-1.5 rounded-lg border ${
+                              u.is_active
+                                ? 'bg-amber-950/40 text-amber-400 border-amber-800 hover:bg-amber-900/60'
+                                : 'bg-emerald-950/40 text-emerald-400 border-emerald-800 hover:bg-emerald-900/60'
+                            }`}
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => setDeleteUser(u)}
+                            title="Delete User Account"
+                            className="p-1.5 bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-slate-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -339,6 +362,17 @@ export const UsersPage: React.FC = () => {
         isDangerous={toggleUser?.is_active}
         onClose={() => setToggleUser(null)}
         onConfirm={handleToggleStatus}
+      />
+
+      {/* Admin Delete User Confirm */}
+      <ConfirmModal
+        isOpen={!!deleteUser}
+        title="Permanently Delete User Account"
+        message={`Are you sure you want to permanently delete user '${deleteUser?.username}'? All their tasks will be deleted.`}
+        confirmLabel="Delete User"
+        isDangerous={true}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={handleDeleteUser}
       />
     </div>
   );

@@ -4,13 +4,19 @@ import { useAuth } from '../auth/AuthContext';
 import { apiFetch } from '../api/client';
 
 export const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Self Account Delete state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +53,27 @@ export const Profile: React.FC = () => {
       setError(err.message || 'Failed to update password');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletePassword) {
+      setDeleteError('Password is required to delete your account.');
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiFetch('/api/users/me', {
+        method: 'DELETE',
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      await logout();
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete account');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -158,6 +185,75 @@ export const Profile: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {/* Danger Zone: Delete Account */}
+      <div className="bg-red-950/20 border border-red-900/60 rounded-2xl p-6 space-y-4">
+        <h2 className="text-base font-bold text-red-400">Danger Zone</h2>
+        <p className="text-xs text-slate-400">
+          Permanently delete your account and all associated tasks. This action cannot be undone.
+        </p>
+        <button
+          onClick={() => {
+            setDeleteModalOpen(true);
+            setDeletePassword('');
+            setDeleteError(null);
+          }}
+          className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          Delete My Account
+        </button>
+      </div>
+
+      {/* Account Deletion Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-red-400">Permanently Delete Account</h3>
+            <p className="text-xs text-slate-300">
+              Are you sure you want to delete your account <strong>{user?.username}</strong>? All your tasks will be permanently removed.
+            </p>
+
+            {deleteError && (
+              <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-red-300 text-xs">
+                {deleteError}
+              </div>
+            )}
+
+            <form onSubmit={handleDeleteAccountSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                  Enter Password to Confirm *
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Your account password"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-red-500"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-slate-200 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
+                >
+                  {deleting ? 'Deleting...' : 'Delete My Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

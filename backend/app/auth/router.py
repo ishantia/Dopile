@@ -1,3 +1,4 @@
+import socket
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from sqlalchemy.orm import Session
@@ -14,6 +15,22 @@ from app.auth.dependencies import get_current_user
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def is_host_device(request: Request) -> bool:
+    if not request.client:
+        return True
+    client_ip = request.client.host
+    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return True
+    try:
+        hostname = socket.gethostname()
+        local_ips = socket.gethostbyname_ex(hostname)[2]
+        if client_ip in local_ips:
+            return True
+    except Exception:
+        pass
+    return False
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(
     payload: LoginRequest,
@@ -23,6 +40,14 @@ def login(
 ):
     client_ip = request.client.host if request.client else "127.0.0.1"
     rate_key = f"login:{client_ip}:{payload.username}"
+
+    # Check host device restriction
+    if settings.HOST_ONLY_LOGIN and not is_host_device(request):
+        log_audit_event(db, "LOGIN_REJECTED_REMOTE", "USER", source_ip=client_ip, metadata={"username": payload.username})
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Login is restricted to the host server device."
+        )
 
     # Check brute force rate limit
     is_limited, retry_after = limiter.is_rate_limited(rate_key, max_requests=5, window_seconds=300)

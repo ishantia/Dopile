@@ -39,3 +39,10 @@ def test_logout(client, user_a):
     response = client.post("/api/auth/logout", headers=headers)
     assert response.status_code == 200
     assert response.json()["message"] == "Logged out successfully"
+
+
+def test_delete_self_account(client, user_a):
+    headers = auth_headers_for(user_a)
+    res = client.request("DELETE", "/api/users/me", json={"password": "Password123!"}, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["message"] == "Account deleted successfully"

@@ -207,6 +207,39 @@ def reset_user_password(
     return {"message": f"Password for user '{user.username}' reset successfully"}
 
 
+@router.delete("/users/{user_id}", dependencies=[Depends(verify_csrf)])
+def delete_user_by_admin(
+    user_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMIN.value))
+):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
+    if user_id == admin_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete your own account through admin interface.")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    deleted_username = user.username
+    db.delete(user)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="USER_DELETED_ADMIN",
+        target_type="USER",
+        actor_user_id=admin_user.id,
+        target_id=user_id,
+        source_ip=client_ip,
+        metadata={"deleted_username": deleted_username}
+    )
+
+    return {"message": f"User '{deleted_username}' deleted successfully"}
+
+
 @router.get("/tasks", response_model=TaskListResponse)
 def list_all_admin_tasks(
     page: int = Query(1, ge=1),

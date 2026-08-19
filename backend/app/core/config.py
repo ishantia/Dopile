@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN: str = "5/minute"
     RATE_LIMIT_API: str = "100/minute"
     
+    HOST_ONLY_LOGIN: bool = True
+    
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
     DATA_DIR: Path = BASE_DIR / "data"
     BACKUP_DIR: Path = BASE_DIR / "backups"

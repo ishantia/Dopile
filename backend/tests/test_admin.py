@@ -48,6 +48,13 @@ def test_admin_create_duplicate_user(client, admin_user, user_a):
     assert "already exists" in dup_res.json()["error"]["message"]
 
 
+def test_admin_delete_user(client, admin_user, user_a):
+    headers = auth_headers_for(admin_user)
+    del_res = client.delete(f"/api/admin/users/{user_a.id}", headers=headers)
+    assert del_res.status_code == 200
+    assert "deleted successfully" in del_res.json()["message"]
+
+
 def test_admin_server_telemetry(client, admin_user):
     headers = auth_headers_for(admin_user)
     server_res = client.get("/api/admin/server", headers=headers)
