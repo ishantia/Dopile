@@ -40,8 +40,13 @@ export async function apiFetch<T>(
     setCsrfToken(responseCsrf);
   }
 
-  // Auto-refresh token attempt if 401 and not already logging in/refreshing
-  if (response.status === 401 && !endpoint.includes('/api/auth/login') && !endpoint.includes('/api/auth/refresh')) {
+  // Auto-refresh token attempt if 401 and not already logging in, checking session, or refreshing
+  if (
+    response.status === 401 &&
+    !endpoint.includes('/api/auth/login') &&
+    !endpoint.includes('/api/auth/refresh') &&
+    !endpoint.includes('/api/auth/me')
+  ) {
     try {
       const refreshRes = await fetch('/api/auth/refresh', {
         method: 'POST',
