@@ -8,13 +8,6 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1, max_length=128)
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    csrf_token: str
-    token_type: str = "bearer"
-    expires_in_seconds: int = 1800
-
-
 class UserResponse(BaseModel):
     id: str
     username: str
@@ -25,6 +18,14 @@ class UserResponse(BaseModel):
     last_login_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    csrf_token: str
+    token_type: str = "bearer"
+    expires_in_seconds: int = 1800
+    user: Optional[UserResponse] = None
 
 
 class PasswordChangeRequest(BaseModel):

@@ -37,14 +37,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    const data = await apiFetch<{ csrf_token: string }>('/api/auth/login', {
+    const data = await apiFetch<{ csrf_token: string; user?: User }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
     if (data.csrf_token) {
       setCsrfToken(data.csrf_token);
     }
-    await fetchCurrentUser();
+    if (data.user) {
+      setUser(data.user);
+    } else {
+      await fetchCurrentUser();
+    }
   };
 
   const logout = async () => {

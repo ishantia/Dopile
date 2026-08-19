@@ -118,7 +118,7 @@ def login(
     csrf_token = generate_csrf_token(user.id)
 
     # Set HttpOnly cookies
-    is_secure = not settings.is_dev()
+    is_secure = request.url.scheme == "https"
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -143,7 +143,8 @@ def login(
         access_token=access_token,
         csrf_token=csrf_token,
         token_type="bearer",
-        expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserResponse.model_validate(user)
     )
 
 
@@ -191,7 +192,7 @@ def refresh_token_endpoint(
     new_access_token = create_access_token({"sub": user.id, "role": user.role})
     csrf_token = generate_csrf_token(user.id)
 
-    is_secure = not settings.is_dev()
+    is_secure = request.url.scheme == "https"
     response.set_cookie(
         key="access_token",
         value=new_access_token,
@@ -206,7 +207,8 @@ def refresh_token_endpoint(
         access_token=new_access_token,
         csrf_token=csrf_token,
         token_type="bearer",
-        expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserResponse.model_validate(user)
     )
 
 
