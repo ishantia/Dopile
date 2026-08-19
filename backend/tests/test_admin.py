@@ -35,6 +35,19 @@ def test_admin_user_management(client, admin_user, user_a):
     assert login_res.status_code == 401
 
 
+def test_admin_create_duplicate_user(client, admin_user, user_a):
+    headers = auth_headers_for(admin_user)
+
+    # Attempt to create duplicate username (case-insensitive)
+    dup_res = client.post("/api/admin/users", json={
+        "username": user_a.username.upper(),
+        "password": "Password123!",
+        "role": "USER"
+    }, headers=headers)
+    assert dup_res.status_code == 409
+    assert "already exists" in dup_res.json()["error"]["message"]
+
+
 def test_admin_server_telemetry(client, admin_user):
     headers = auth_headers_for(admin_user)
     server_res = client.get("/api/admin/server", headers=headers)

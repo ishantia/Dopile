@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
+from sqlalchemy.exc import IntegrityError
 
 from app.db.database import get_db
 from app.db.models import User, Task, AuditLog, UserRole
@@ -62,9 +63,9 @@ def create_user(
 ):
     client_ip = request.client.host if request.client else "127.0.0.1"
 
-    existing = db.query(User).filter(User.username == payload.username.strip()).first()
+    existing = db.query(User).filter(User.username.ilike(payload.username.strip())).first()
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Username '{payload.username}' already exists")
 
     if not validate_password_strength(payload.password):
         raise HTTPException(
@@ -79,9 +80,16 @@ def create_user(
         role=payload.role.value,
         is_active=True
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Username '{payload.username}' already exists"
+        )
 
     log_audit_event(
         db,
