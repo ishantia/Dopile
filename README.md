@@ -68,7 +68,7 @@ cd Dopile
 Initialize your administrator account using the Dopile CLI:
 
 ```bash
-PYTHONPATH=backend python -m app.cli create-admin
+PYTHONPATH=backend .venv/bin/python -m app.cli create-admin
 ```
 
 Follow the prompts to set your Admin username and password.
