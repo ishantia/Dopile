@@ -39,13 +39,13 @@ Android Phone (Termux)
 
 ## 3. Termux Installation Guide
 
-### Step 1: Install Termux Packages
+### Step 1: Install Termux Packages & Build Tools
 
-Open Termux on your Android device and install Python and Git:
+Open Termux on your Android device and install Python, Git, and build toolchain (required for compiled C/Rust extensions on Android):
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install python git -y
+pkg install python git clang rust binutils make -y
 ```
 
 ### Step 2: Clone & Setup Environment
