@@ -84,6 +84,35 @@ Once running, access Dopile from any device on your Wi-Fi network:
 
 ---
 
+## 🛠️ Admin Tools: Swagger UI API Docs & SQLite Web Interface
+
+### 1. Interactive Swagger UI & ReDoc API Documentation
+FastAPI includes built-in interactive OpenAPI documentation. By default, API docs are disabled in production mode for security. To enable them:
+
+1. Edit `.env` and set:
+   ```ini
+   APP_ENV=dev
+   ```
+2. Restart the server (`./stop.sh && ./start.sh`).
+3. Open interactive documentation in your browser:
+   * **Swagger UI**: `http://<YOUR_DEVICE_IP>:8080/docs`
+   * **ReDoc**: `http://<YOUR_DEVICE_IP>:8080/redoc`
+
+### 2. Graphical SQLite Database Web Interface (`sqlite-web`)
+To browse, query, and inspect raw SQLite database tables via a web browser across your LAN:
+
+1. Install `sqlite-web` in Termux/Linux:
+   ```bash
+   pip install sqlite-web
+   ```
+2. Launch the SQLite web GUI bound to all network interfaces (`-H 0.0.0.0`):
+   ```bash
+   sqlite_web ./data/dopile.db -H 0.0.0.0 -p 8081
+   ```
+3. Open in any browser on your Wi-Fi network: `http://<YOUR_DEVICE_IP>:8081`
+
+---
+
 ## 🔋 Making Dopile Unkillable & Auto-Starting on Android Boot
 
 If you are hosting Dopile on an Android phone via Termux and want the server to **never get killed by Android** and **automatically start whenever your phone reboots or powers on**, follow these steps:
