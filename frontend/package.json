@@ -2,6 +2,11 @@
   "name": "dopile-frontend",
   "private": true,
   "version": "1.0.0",
+  "author": "ishantia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ishantia/Dopile.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -19,26 +19,28 @@ Android Phone (Termux)
 ```
 
 ### Stack & Components
-* **Backend**: Python 3, FastAPI, Uvicorn, SQLAlchemy 2.0 (SQLite WAL mode), Alembic, Argon2id (`argon2-cffi`), PyJWT, Pydantic v2, Pytest.
-* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, Installable PWA Service Worker.
+
+- **Backend**: Python 3, FastAPI, Uvicorn, SQLAlchemy 2.0 (SQLite WAL mode), Alembic, Argon2id (`argon2-cffi`), PyJWT, Pydantic v2, Pytest.
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, Installable PWA Service Worker.
 
 ---
 
 ## 2. Core Features
 
-* 🔐 **Secure Authentication**: Argon2id password hashing, HttpOnly cookies, SameSite protection, double-submit CSRF tokens, session expiration, and login rate-limiting (brute force protection).
-* 🛡️ **Role-Based Authorization**: Strict resource scoping (`USER` vs `ADMIN`). Prevention of IDOR and privilege escalation vulnerabilities.
-* 📋 **Task Management**: Create, search, filter by status/priority, sort, set due dates, and update tasks.
-* ⚡ **Realtime Synchronization**: Authenticated WebSocket broadcasts for instant task status updates across connected devices.
-* 👑 **Admin Console**: User management (create users, deactivate accounts, reset passwords, change roles), system audit logs, live server telemetry, and database backup/restore.
-* 📱 **PWA & Mobile-First UX**: Responsive mobile layout with offline static asset caching.
-* 📦 **Termux Native**: Simple shell scripts (`start.sh`, `stop.sh`, `status.sh`) and CLI management without complex container runtimes.
+- 🔐 **Secure Authentication**: Argon2id password hashing, HttpOnly cookies, SameSite protection, double-submit CSRF tokens, session expiration, and login rate-limiting (brute force protection).
+- 🛡️ **Role-Based Authorization**: Strict resource scoping (`USER` vs `ADMIN`). Prevention of IDOR and privilege escalation vulnerabilities.
+- 📋 **Task Management**: Create, search, filter by status/priority, sort, set due dates, and update tasks.
+- ⚡ **Realtime Synchronization**: Authenticated WebSocket broadcasts for instant task status updates across connected devices.
+- 👑 **Admin Console**: User management (create users, deactivate accounts, reset passwords, change roles), system audit logs, live server telemetry, and database backup/restore.
+- 📱 **PWA & Mobile-First UX**: Responsive mobile layout with offline static asset caching.
+- 📦 **Termux Native**: Simple shell scripts (`start.sh`, `stop.sh`, `status.sh`) and CLI management without complex container runtimes.
 
 ---
 
 ## 3. Termux Installation Guide
 
 ### Step 1: Install Termux Packages
+
 Open Termux on your Android device and install Python and Git:
 
 ```bash
@@ -47,10 +49,11 @@ pkg install python git -y
 ```
 
 ### Step 2: Clone & Setup Environment
+
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/your-username/Dopile.git
+git clone https://github.com/ishantia/Dopile.git
 cd Dopile
 
 # Create virtual environment
@@ -62,6 +65,7 @@ pip install -r backend/requirements.txt
 ```
 
 ### Step 3: Build Frontend PWA (Optional if pre-built)
+
 If building from source on Termux (requires Node.js):
 
 ```bash
@@ -73,6 +77,7 @@ cd ..
 ```
 
 ### Step 4: Initialize Server & Create Admin
+
 Run the CLI initialization script to generate secure `.env` secrets and initialize database tables:
 
 ```bash
@@ -86,6 +91,7 @@ PYTHONPATH=backend python -m app.cli create-admin --username admin
 ```
 
 ### Step 5: Start Server
+
 Make scripts executable and run:
 
 ```bash
@@ -94,6 +100,7 @@ chmod +x start.sh stop.sh status.sh
 ```
 
 Sample output:
+
 ```text
 Dopile
 ────────────────────────
@@ -113,6 +120,7 @@ Press Ctrl+C to stop server.
 ## 4. Android Battery Optimization Notice
 
 To prevent Android OS power management from killing the Termux background server:
+
 1. Open Android **Settings** &rarr; **Apps** &rarr; **Termux**.
 2. Set Battery Usage to **Unrestricted** / **Don't Optimize**.
 3. In Termux, run `termux-wake-lock` to keep the CPU awake during active server operations.
@@ -121,10 +129,10 @@ To prevent Android OS power management from killing the Termux background server
 
 ## 5. Security Model & Best Practices
 
-* **Argon2id Hashing**: Passwords are never stored in plaintext. Argon2id protects against hardware-accelerated dictionary attacks.
-* **Double-Submit CSRF Protection**: State-changing endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require a valid `X-CSRF-Token` matching the user session.
-* **No Database Expose**: SQLite database file (`data/dopile.db`) is stored strictly outside the public web root.
-* **Audit Logging**: All security actions (`LOGIN_SUCCESS`, `PASSWORD_RESET`, `USER_DISABLED`, `BACKUP_CREATED`) are logged into a queryable audit table.
+- **Argon2id Hashing**: Passwords are never stored in plaintext. Argon2id protects against hardware-accelerated dictionary attacks.
+- **Double-Submit CSRF Protection**: State-changing endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require a valid `X-CSRF-Token` matching the user session.
+- **No Database Expose**: SQLite database file (`data/dopile.db`) is stored strictly outside the public web root.
+- **Audit Logging**: All security actions (`LOGIN_SUCCESS`, `PASSWORD_RESET`, `USER_DISABLED`, `BACKUP_CREATED`) are logged into a queryable audit table.
 
 ---
 
