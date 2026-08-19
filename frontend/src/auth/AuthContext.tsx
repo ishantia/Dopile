@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string, email?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAdmin: boolean;
@@ -51,6 +52,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (username: string, password: string, email?: string) => {
+    const data = await apiFetch<{ csrf_token: string; user?: User }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, email }),
+    });
+    if (data.csrf_token) {
+      setCsrfToken(data.csrf_token);
+    }
+    if (data.user) {
+      setUser(data.user);
+    } else {
+      await fetchCurrentUser();
+    }
+  };
+
   const logout = async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -65,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = user?.role === 'ADMIN';
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: fetchCurrentUser, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser: fetchCurrentUser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

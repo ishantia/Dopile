@@ -46,3 +46,24 @@ def test_delete_self_account(client, user_a):
     res = client.request("DELETE", "/api/users/me", json={"password": "Password123!"}, headers=headers)
     assert res.status_code == 200
     assert res.json()["message"] == "Account deleted successfully"
+
+
+def test_register_success(client):
+    res = client.post("/api/auth/register", json={
+        "username": "brandnewuser",
+        "password": "Password123!",
+        "email": "new@example.com"
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert "access_token" in data
+    assert data["user"]["username"] == "brandnewuser"
+
+
+def test_register_duplicate_username(client, user_a):
+    res = client.post("/api/auth/register", json={
+        "username": user_a.username.upper(),
+        "password": "Password123!"
+    })
+    assert res.status_code == 409
+    assert "already exists" in res.json()["error"]["message"]

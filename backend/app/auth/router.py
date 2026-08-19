@@ -5,13 +5,14 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from sqlalchemy.orm import Session
 
+from sqlalchemy.exc import IntegrityError
 from app.db.database import get_db
-from app.db.models import User
-from app.core.security import verify_password, create_access_token, create_refresh_token, generate_csrf_token, decode_token
+from app.db.models import User, UserRole
+from app.core.security import verify_password, hash_password, validate_password_strength, create_access_token, create_refresh_token, generate_csrf_token, decode_token
 from app.core.rate_limit import check_rate_limit, limiter
 from app.core.config import settings
 from app.audit.service import log_audit_event
-from app.auth.schemas import LoginRequest, TokenResponse, UserResponse, MeResponse
+from app.auth.schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse, MeResponse
 from app.auth.dependencies import get_current_user, get_optional_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -138,6 +139,107 @@ def login(
     response.headers["X-CSRF-Token"] = csrf_token
 
     log_audit_event(db, "LOGIN_SUCCESS", "USER", actor_user_id=user.id, source_ip=client_ip)
+
+    return TokenResponse(
+        access_token=access_token,
+        csrf_token=csrf_token,
+        token_type="bearer",
+        expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserResponse.model_validate(user)
+    )
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register(
+    payload: RegisterRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    clean_username = payload.username.strip()
+    rate_key = f"register:{client_ip}"
+
+    # Rate limiting for registration
+    is_limited, retry_after = limiter.is_rate_limited(rate_key, max_requests=5, window_seconds=300)
+    if is_limited:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many registration attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)}
+        )
+
+    # Validate username availability (case-insensitive)
+    existing = db.query(User).filter(User.username.ilike(clean_username)).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Username '{clean_username}' already exists"
+        )
+
+    # Validate password strength
+    if not validate_password_strength(payload.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long and contain at least one digit or symbol."
+        )
+
+    clean_email = payload.email.strip() if payload.email and payload.email.strip() else None
+
+    user = User(
+        username=clean_username,
+        email=clean_email,
+        password_hash=hash_password(payload.password),
+        role=UserRole.USER.value,
+        is_active=True
+    )
+
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Username '{clean_username}' already exists"
+        )
+
+    # Generate session tokens for immediate login
+    access_token = create_access_token({"sub": user.id, "role": user.role})
+    refresh_token = create_refresh_token({"sub": user.id})
+    csrf_token = generate_csrf_token(user.id)
+
+    is_secure = request.url.scheme == "https"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        secure=is_secure,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        samesite="lax",
+        secure=is_secure,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
+    )
+    response.headers["X-CSRF-Token"] = csrf_token
+
+    log_audit_event(
+        db,
+        action="USER_REGISTERED",
+        target_type="USER",
+        actor_user_id=user.id,
+        target_id=user.id,
+        source_ip=client_ip,
+        metadata={"username": user.username}
+    )
+
+    logger.info(f"New user registered: '{user.username}' from IP='{client_ip}'")
 
     return TokenResponse(
         access_token=access_token,
