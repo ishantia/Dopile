@@ -1,152 +1,133 @@
-# Dopile — Secure LAN Task Manager Server for Android/Termux
+# Dopile 📋
 
-**Dopile** is a production-quality, self-hosted, multi-user **LAN Task Manager** designed specifically to run as a lightweight web server on an **Android phone using Termux**, without requiring Docker, root access, Android Studio, or an Android APK.
+**Secure, Self-Hosted LAN Task Manager Server for Android (Termux) & Linux**
 
-The Android phone acts as the server. Any device connected to the same Wi-Fi network, local area network (LAN), or mobile Wi-Fi hotspot can access Dopile through a browser or install it as a Progressive Web App (PWA).
-
----
-
-## 1. Architecture
-
-```text
-Android Phone (Termux)
-└── Python 3 + FastAPI + Uvicorn
-    ├── REST API (/api/auth, /api/tasks, /api/users, /api/admin)
-    ├── Realtime WebSockets (/ws)
-    ├── Security (Argon2id, HttpOnly Cookies, CSRF, Rate Limiting)
-    ├── SQLite WAL Database (SQLAlchemy 2.0 + Alembic)
-    └── Static SPA / PWA Serving
-```
-
-### Stack & Components
-
-- **Backend**: Python 3, FastAPI, Uvicorn, SQLAlchemy 2.0 (SQLite WAL mode), Alembic, Argon2id (`argon2-cffi`), PyJWT, Pydantic v2, Pytest.
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, Installable PWA Service Worker.
+Dopile is a modern, high-performance, self-hosted Task Manager application designed to run effortlessly on Android devices via Termux or any Linux server on your Local Area Network (LAN). It provides real-time task synchronization over WebSockets, Progressive Web App (PWA) offline capabilities, enterprise-grade security, and a full Admin Oversight Suite.
 
 ---
 
-## 2. Core Features
+## 🌟 Key Features
 
-- 🔐 **Secure Authentication**: Argon2id password hashing, HttpOnly cookies, SameSite protection, double-submit CSRF tokens, session expiration, and login rate-limiting (brute force protection).
-- 🛡️ **Role-Based Authorization**: Strict resource scoping (`USER` vs `ADMIN`). Prevention of IDOR and privilege escalation vulnerabilities.
-- 📋 **Task Management**: Create, search, filter by status/priority, sort, set due dates, and update tasks.
-- ⚡ **Realtime Synchronization**: Authenticated WebSocket broadcasts for instant task status updates across connected devices.
-- 👑 **Admin Console**: User management (create users, deactivate accounts, reset passwords, change roles), system audit logs, live server telemetry, and database backup/restore.
-- 📱 **PWA & Mobile-First UX**: Responsive mobile layout with offline static asset caching.
-- 📦 **Termux Native**: Simple shell scripts (`start.sh`, `stop.sh`, `status.sh`) and CLI management without complex container runtimes.
+* **📱 Progressive Web App (PWA)**: Installable on Android, iOS, Windows, and macOS as a native-feeling app with offline caching and service worker support.
+* **⚡ Real-Time WebSocket Synchronization**: Live updates across all connected LAN devices whenever tasks are created, edited, re-prioritized, or completed.
+* **🔒 Enterprise Security Architecture**:
+  * **Argon2id Hashing**: High-security password hashing with salt.
+  * **HttpOnly Session Cookies**: Prevents XSS token theft.
+  * **Double-Submit CSRF Protection**: Strict `X-CSRF-Token` header verification for state-changing HTTP requests.
+  * **Sliding-Window Rate Limiting**: In-memory rate limiting to prevent brute-force login attempts.
+  * **Strict RBAC & IDOR Prevention**: Robust authorization checks enforcing user isolation and role permissions.
+* **🌐 Per-Account Wi-Fi IP-Binding Security**:
+  * **Standard Users (`USER`)**: Automatically bound to their Wi-Fi / LAN IP address upon first login or registration. Attempts to access an account from an unauthorized IP are blocked with HTTP 403.
+  * **Admin Exemption (`ADMIN`)**: Admin accounts bypass IP binding restrictions and can log in from any IP address across the network.
+  * **Admin Management**: Admins can view every user's bound IP, manually assign a new IP, or reset (unbind) a user's IP in the Admin Panel.
+* **👑 Complete Admin Suite**:
+  * **User Management**: Create users, toggle active status, update roles, reset passwords, delete accounts, and manage bound IP addresses.
+  * **Task Oversight & Reassignment**: Inspect and reassign any task in the system.
+  * **Audit Logging**: Comprehensive, immutable audit trail for security events, logins, and administrative actions.
+  * **System Telemetry**: Live server status, active WebSocket connection counters, uptime, and database health metrics.
+  * **Automated SQLite Backups**: One-click database backup and point-in-time restore functionality.
+* **🤖 Termux & ARM64 Optimized**: Specifically engineered to bypass worker thread memory crashes during PWA minification on ARM/Android devices.
 
 ---
 
-## 3. Termux Installation Guide
+## 🛠️ Security & Architecture
 
-### Step 1: Install Termux Packages & Build Tools
+| Layer | Mechanism | Details |
+| :--- | :--- | :--- |
+| **Authentication** | Argon2id + JWT HttpOnly Cookies | Passwords hashed with Argon2id ($m=65536, t=3, p=4$). Session tokens stored in HttpOnly, SameSite cookies. |
+| **CSRF Defense** | Double-Submit Cookie Pattern | State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require a valid `X-CSRF-Token` header. |
+| **IP Security** | Wi-Fi / LAN IP Binding | Accounts automatically bind to initial client IP. Admin bypass allows seamless administration. |
+| **Data Storage** | SQLite Write-Ahead Logging (WAL) | High-concurrency SQLite storage with WAL mode enabled and foreign keys enforced. |
+| **API Transport** | Dynamic Scheme Cookie Safety | Automatically adapts cookie `Secure` flag based on HTTP vs HTTPS scheme for seamless LAN access. |
 
-Open Termux on your Android device and install Python, Git, and build toolchain (required for compiled C/Rust extensions on Android):
+---
+
+## 🚀 Quick Start Guide for Termux / Linux
+
+### 1. Prerequisites (Termux Setup)
+
+On Android Termux, install Python, Node.js, and C/Rust build tools (required for compiling Python security dependencies):
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install python git clang rust binutils make -y
+pkg install git python nodejs clang rust binutils make -y
 ```
 
-### Step 2: Clone & Setup Environment
-
-Clone the repository and install dependencies:
+### 2. Clone Repository & Run
 
 ```bash
 git clone https://github.com/ishantia/Dopile.git
 cd Dopile
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install Python requirements
-pip install -r backend/requirements.txt
-```
-
-### Step 3: Build Frontend PWA (Optional if pre-built)
-
-If building from source on Termux (requires Node.js):
-
-```bash
-pkg install nodejs -y
-cd frontend
-npm install
-npm run build
-cd ..
-```
-
-### Step 4: Initialize Server & Create Admin
-
-Run the CLI initialization script to generate secure `.env` secrets and initialize database tables:
-
-```bash
-PYTHONPATH=backend python -m app.cli init
-```
-
-Create your administrative account:
-
-```bash
-PYTHONPATH=backend python -m app.cli create-admin --username admin
-```
-
-### Step 5: Start Server
-
-Make scripts executable and run:
-
-```bash
-chmod +x start.sh stop.sh status.sh
 ./start.sh
 ```
 
-Sample output:
+`start.sh` automatically creates the Python virtual environment (`.venv`), installs dependencies, runs database migrations, and launches the server.
 
-```text
-Dopile
-────────────────────────
-Status:   RUNNING
+### 3. Create Admin Account
 
-Local:    http://localhost:8080
-LAN:      http://192.168.1.50:8080
-Port:     8080
-Database: OK
-PWA:      READY
-────────────────────────
-Press Ctrl+C to stop server.
-```
-
----
-
-## 4. Android Battery Optimization Notice
-
-To prevent Android OS power management from killing the Termux background server:
-
-1. Open Android **Settings** &rarr; **Apps** &rarr; **Termux**.
-2. Set Battery Usage to **Unrestricted** / **Don't Optimize**.
-3. In Termux, run `termux-wake-lock` to keep the CPU awake during active server operations.
-
----
-
-## 5. Security Model & Best Practices
-
-- **Argon2id Hashing**: Passwords are never stored in plaintext. Argon2id protects against hardware-accelerated dictionary attacks.
-- **Double-Submit CSRF Protection**: State-changing endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require a valid `X-CSRF-Token` matching the user session.
-- **No Database Expose**: SQLite database file (`data/dopile.db`) is stored strictly outside the public web root.
-- **Audit Logging**: All security actions (`LOGIN_SUCCESS`, `PASSWORD_RESET`, `USER_DISABLED`, `BACKUP_CREATED`) are logged into a queryable audit table.
-
----
-
-## 6. Running Automated Tests
-
-Run the backend pytest suite:
+Initialize your administrator account using the Dopile CLI:
 
 ```bash
-cd backend
-pytest -v
+python -m app.cli create-admin
+```
+
+Follow the prompts to set your Admin username and password.
+
+---
+
+## 📱 Accessing the Web Application
+
+Once running, access Dopile from any device on your Wi-Fi network:
+
+* **Local Machine**: `http://localhost:8080`
+* **LAN Wi-Fi Devices**: `http://<YOUR_DEVICE_IP>:8080` *(e.g. `http://192.168.1.50:8080`)*
+
+---
+
+## ⚙️ Configuration (.env)
+
+Customize your Dopile server by editing the `.env` file in the project root:
+
+```ini
+# Application Settings
+APP_NAME=Dopile
+APP_ENV=production
+HOST=0.0.0.0
+PORT=8080
+
+# Security Keys (Auto-generated on init)
+SECRET_KEY=your_min_32_byte_secret_key
+CSRF_SECRET=your_min_32_byte_csrf_secret
+
+# Host Restrictions
+# Set to false to allow logging in from remote devices across LAN
+HOST_ONLY_LOGIN=true
+
+# Rate Limits
+RATE_LIMIT_LOGIN=5/minute
+RATE_LIMIT_API=100/minute
 ```
 
 ---
 
-## 7. License
+## 📜 Shell Helper Scripts
 
-MIT License. Designed and built for self-hosted LAN productivity.
+Dopile includes convenient shell scripts for process management:
+
+* `./start.sh` — Starts database migrations and launches the Dopile server in background/foreground.
+* `./stop.sh` — Gracefully stops running Dopile server processes.
+* `./status.sh` — Inspects running status, network IP, and port bindings.
+
+---
+
+## 💻 Tech Stack
+
+* **Backend**: FastAPI (Python 3.11+), SQLAlchemy 2.0, Pydantic v2, PyJWT, Argon2-cffi, AnyIO, Uvicorn.
+* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Workbox PWA.
+* **Database**: SQLite 3 with Write-Ahead Logging (WAL) and Alembic migrations.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. Created by [ishantia](https://github.com/ishantia).
