@@ -63,6 +63,16 @@ def get_current_user(
     return user
 
 
+def get_optional_current_user(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    try:
+        return get_current_user(request, db)
+    except HTTPException:
+        return None
+
+
 def verify_csrf(request: Request, current_user: User = Depends(get_current_user)):
     """
     CSRF verification for state-changing HTTP methods.

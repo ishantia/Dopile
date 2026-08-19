@@ -9,8 +9,8 @@ from app.core.security import verify_password, create_access_token, create_refre
 from app.core.rate_limit import check_rate_limit, limiter
 from app.core.config import settings
 from app.audit.service import log_audit_event
-from app.auth.schemas import LoginRequest, TokenResponse, UserResponse
-from app.auth.dependencies import get_current_user
+from app.auth.schemas import LoginRequest, TokenResponse, UserResponse, MeResponse
+from app.auth.dependencies import get_current_user, get_optional_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -186,6 +186,8 @@ def refresh_token_endpoint(
     )
 
 
-@router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+@router.get("/me", response_model=MeResponse)
+def get_me(current_user: Optional[User] = Depends(get_optional_current_user)):
+    if not current_user:
+        return MeResponse(authenticated=False, user=None)
+    return MeResponse(authenticated=True, user=UserResponse.model_validate(current_user))

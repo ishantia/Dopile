@@ -19,8 +19,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchCurrentUser = async () => {
     try {
-      const data = await apiFetch<User>('/api/auth/me');
-      setUser(data);
+      const data = await apiFetch<{ authenticated: boolean; user: User | null }>('/api/auth/me');
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
     } catch {
       setUser(null);
     } finally {
