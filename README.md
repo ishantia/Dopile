@@ -108,6 +108,8 @@ EOF
 chmod +x ~/.termux/boot/start-dopile.sh
 ```
 
+> **Note**: You do **not** need to manually activate `.venv` in the boot script because `./start.sh` automatically detects, activates, and handles `.venv` for you!
+
 Now, whenever your Android phone powers on or reboots, **Dopile will automatically start up in the background and remain active 24/7**!
 
 ---
