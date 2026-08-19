@@ -101,10 +101,22 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div className="pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div>
             <span className="text-slate-500 font-semibold uppercase">Account ID</span>
             <p className="text-slate-300 font-mono mt-0.5">{user?.id}</p>
+          </div>
+          <div>
+            <span className="text-slate-500 font-semibold uppercase">Bound Wi-Fi IP</span>
+            <p className="text-slate-300 font-mono mt-0.5">
+              {user?.allowed_ip ? (
+                <span className="inline-flex items-center space-x-1 text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded font-mono text-[11px]">
+                  {user.allowed_ip}
+                </span>
+              ) : (
+                <span className="text-slate-500 italic">Unbound / Dynamic</span>
+              )}
+            </p>
           </div>
           <div>
             <span className="text-slate-500 font-semibold uppercase">Joined Date</span>

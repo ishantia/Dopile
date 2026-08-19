@@ -19,7 +19,7 @@ from app.audit.service import log_audit_event
 from app.websocket.manager import ws_manager
 from app.admin.schemas import (
     AdminUserCreate, AdminUserStatusUpdate, AdminUserRoleUpdate,
-    AdminPasswordReset, AdminTaskReassign, ServerStatusResponse,
+    AdminPasswordReset, AdminUserIpUpdate, AdminTaskReassign, ServerStatusResponse,
     AuditLogResponse, AuditLogListResponse, BackupListResponse
 )
 from app.admin.service import create_sqlite_backup, list_backups, restore_sqlite_backup
@@ -238,6 +238,38 @@ def delete_user_by_admin(
     )
 
     return {"message": f"User '{deleted_username}' deleted successfully"}
+
+
+@router.patch("/users/{user_id}/ip", response_model=UserResponse, dependencies=[Depends(verify_csrf)])
+def update_user_allowed_ip(
+    user_id: str,
+    payload: AdminUserIpUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMIN.value))
+):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    new_ip = payload.allowed_ip.strip() if payload.allowed_ip and payload.allowed_ip.strip() else None
+    user.allowed_ip = new_ip
+    db.commit()
+    db.refresh(user)
+
+    log_audit_event(
+        db,
+        action="USER_IP_BOUND_ADMIN",
+        target_type="USER",
+        actor_user_id=admin_user.id,
+        target_id=user.id,
+        source_ip=client_ip,
+        metadata={"assigned_ip": new_ip}
+    )
+
+    return UserResponse.model_validate(user)
 
 
 @router.get("/tasks", response_model=TaskListResponse)

@@ -31,3 +31,15 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def init_db():
+    from app.db.base import Base
+    from sqlalchemy import text
+    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("SELECT allowed_ip FROM users LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE users ADD COLUMN allowed_ip VARCHAR(64)"))
+            conn.commit()

@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     email: Optional[str] = None
     role: str
     is_active: bool
+    allowed_ip: Optional[str] = None
     created_at: datetime
     last_login_at: Optional[datetime] = None
 

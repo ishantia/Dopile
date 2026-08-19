@@ -10,6 +10,7 @@ export interface User {
   email?: string | null;
   role: UserRole;
   is_active: boolean;
+  allowed_ip?: string | null;
   created_at: string;
   last_login_at?: string | null;
 }

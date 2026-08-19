@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.logging import setup_logging, logger
-from app.db.database import engine, get_db, SessionLocal
+from app.db.database import engine, get_db, SessionLocal, init_db
 from app.db.base import Base
 from app.db.models import User
 from app.core.security import decode_token
@@ -25,8 +25,7 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} server on {settings.HOST}:{settings.PORT}")
-    # Auto create tables if needed
-    Base.metadata.create_all(bind=engine)
+    init_db()
     yield
     logger.info(f"Shutting down {settings.APP_NAME} server gracefully...")
 
